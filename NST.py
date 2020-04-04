@@ -1,0 +1,64 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Apr  4 12:59:05 2020
+
+@author: mousekinga82
+
+The Neutral Style Transfer Practice Using VGG-19
+
+Reference:
+    "Very Deep Convolutional Networks For Large-Scale Image Recognition"
+    by Karen Simonyan & Andrew Zisserman
+    
+    Coursea Deep.ai course by Andrew Ng.
+"""
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import imshow
+from NST_util import *
+
+learning_rate = 2.0
+iter_num = 200
+print_rate = 10
+save_pc_prefix = ""
+
+#Load Content/Style image and then pre-prosessing
+content_image = plt.imread("images/louvre_small.jpg")
+content_image = reshape_and_normalize_image(content_image)
+
+style_image = plt.imread("images/monet.jpg")
+style_image = reshape_and_normalize_image(style_image)
+#Generate input image with noise
+generated_image = generate_noise_image(content_image)
+
+#Load pre-trained VGG model
+tf.reset_default_graph()
+model = load_vgg_model("pretrained-model/imagenet-vgg-verydeep-19.mat")
+
+#Get the total cost
+J_content = compute_content_cost(model, content_image, 'conv4_2')
+J_style = compute_style_cost(model, style_image)
+J_total = total_cost(J_content, J_style)
+
+#Define optimizer
+optimizer = tf.train.AdamOptimizer(learning_rate)
+#Define train step
+train_step = optimizer.minimize(J_total)
+
+#Strat training process
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    sess.run(model['input'].assign(generated_image))
+    for i in range(iter_num):
+        sess.run(train_step)
+        if i%print_rate == 0:
+            Jt, Jc, Js, generated_image = sess.run([J_total, J_content, J_style, model['input']])
+            print("Iteraiton " + str(i) + ":")
+            print("total cost = " + str(Jt))
+            print("content cost = " + str(Jc))
+            print("style cost = " + str(Js))
+            #save image
+            save_image("output/" + save_pc_prefix + "_" + str(i) + ".png", generated_image)
+#save final image
+save_image('output/' + save_pc_prefix + "_final.jpg", generated_image)
