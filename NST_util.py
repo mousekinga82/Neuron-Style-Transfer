@@ -10,21 +10,29 @@ import scipy.io
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image, ImageOps
 
 class CONFIG:
-    IMAGE_WIDTH = 400
-    IMAGE_HEIGHT = 300
+    IMAGE_HEIGHT = 395
+    IMAGE_WIDTH = 700
     COLOR_CHANNELS = 3
     NOISE_RATIO = 0.6
     VGG_MODEL_PATH = 'pretrained-model/imagenet-vgg-verydeep-19.mat'
     MEANS = np.array([123.68, 116.779, 103.939]).reshape((1,1,1,3)) 
     #Define layer used for style
     STYLE_LAYERS = [
-    ('conv1_1',0.2),
-    ('conv2_1',0.2),
-    ('conv3_1',0.2),
-    ('conv4_1',0.2),
-    ('conv5_1',0.2)]
+    ('conv1_1',0.1),
+    ('conv2_1',0.3),
+    ('conv3_1',0.3),
+    ('conv4_1',0.3)]
+    #('conv5_1',0.0)]
+    
+    @classmethod
+    def set_content_imageHW(cls, H, W):
+        cls.IMAGE_HEIGHT, cls.IMAGE_WIDTH = (H, W)
+        
+def pp():
+    print(CONFIG.IMAGE_HEIGHT, CONFIG.IMAGE_WIDTH)
 
 def load_vgg_model(path):
     """
@@ -188,7 +196,6 @@ def compute_content_cost(model, content_image_pre, content_layer):
         a_C = sess.run(out)
         #a_G is stll an un-evaluated tensor  
         a_G = out
-    
     #Retrieve dimensoins 
     m, n_H, n_W, n_C = a_G.get_shape().as_list()
     #Reshape a_C & a_G
@@ -208,7 +215,7 @@ def gram_matrix(A):
     GA -- Gram matrix of A, of shape (n_C, n_C)
     """
     n_C, _ = A.get_shape().as_list()
-    GA = tf.matmul(A, tf.transpose(A, perm = [1, 0]))  
+    GA = tf.matmul(A, tf.transpose(A, perm = [1, 0]))
     
     return GA
 
@@ -230,7 +237,7 @@ def compute_layer_style_cost(a_S, a_G):
     GS = gram_matrix(a_S)
     GG = gram_matrix(a_G)
     #Compute the cost
-    J_style_layer = tf.reduce_sum(tf.square(tf.subtract(GS, GG)))/(4 * np.square(n_H * n_W * n_C).astype('float32'))
+    J_style_layer = tf.reduce_sum(tf.square(tf.subtract(GS, GG)))/(4 * np.square(n_H * n_W * n_C, dtype = 'float32'))
     
     return J_style_layer
 
@@ -303,3 +310,11 @@ def save_image(path, image):
     #clip & save image
     image = np.clip(image[0], 0, 255).astype('uint8')
     plt.imsave(path, image)
+    
+def resize_image(path, H, W):
+    """
+    Resize an image to an arbitrary size 
+    """
+    original_image = Image.open(path)
+    fit_and_resized_image = ImageOps.fit(original_image, (W, H), Image.ANTIALIAS)
+    return np.array(fit_and_resized_image)
