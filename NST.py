@@ -45,7 +45,7 @@ model = load_vgg_model("pretrained-model/imagenet-vgg-verydeep-19.mat")
 #Get the total cost..
 J_content = compute_content_cost(model, content_image, 'conv4_2')
 J_style = compute_style_cost(model, style_image)
-J_total = total_cost(J_content, J_style, alpha=1000, beta=1)
+J_total = total_cost(J_content, J_style, alpha=10, beta=1)
 
 #Define optimizer
 optimizer = tf.train.AdamOptimizer(learning_rate)
@@ -69,18 +69,3 @@ with tf.Session() as sess:
             save_image("output/" + save_pc_prefix + "_" + str(i) + ".png", generated_image)
 #save final image
 save_image('output/' + save_pc_prefix + "_final.jpg", generated_image)
-
-if (4 > 1):
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        sess.run(model['input'].assign(generated_image))
-        a_G1, a_G2 = sess.run([model['conv1_1'], model['conv2_1']])
-        sess.run(model['input'].assign(style_image))
-        a_S1, a_S2 = sess.run([model['conv1_1'], model['conv2_1']])
-        m, n_H, n_W, n_C = a_G1.shape
-        s_cost1 = 0.5 * tf.reduce_sum(tf.square(tf.subtract(a_S1, a_G1)))/(4 * np.square(n_H * n_W * n_C).astype('float32'))
-        m, n_H, n_W, n_C = a_G2.shape
-        s_cost2 = 0.5 * tf.reduce_sum(tf.square(tf.subtract(a_S2, a_G2)))/(4 * np.square(n_H * n_W * n_C).astype('float32'))
-        s_cost =  40 * (s_cost1 + s_cost2)
-        sa1, sa2 = sess.run([s_cost1, s_cost2])
-        J__ts = sess.run(J_ts)
